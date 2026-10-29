@@ -1,6 +1,7 @@
 import React, {useEffect, useState} from 'react';
 import {
   AbsoluteFill,
+  Easing,
   OffthreadVideo,
   Sequence,
   continueRender,
@@ -15,6 +16,7 @@ export type Scene = {
   idx?: number;
   narration_my?: string;
   caption_lines_my?: string[];
+  highlight_my?: string;
   visual_query_en?: string;
   duration_sec: number;
   clip_url?: string | null;
@@ -23,18 +25,22 @@ export type Scene = {
 export type NewsProps = {
   channel: string;
   headline_my: string;
+  date_my?: string;
   source_my?: string;
   scenes: Scene[];
 };
 
 const BODY = 'NotoMy, sans-serif';
 const BOLD = 'NotoMyBold, NotoMy, sans-serif';
-const GRADIENTS = [
-  'linear-gradient(160deg, #0b1f3a 0%, #123a63 100%)',
-  'linear-gradient(160deg, #1b1b3a 0%, #3a2a63 100%)',
-  'linear-gradient(160deg, #0d2b2b 0%, #14506a 100%)',
-  'linear-gradient(160deg, #2a1a1a 0%, #5a2a3a 100%)',
+const RED = '#ff4d4d';
+const PANEL_GRADIENTS = [
+  'linear-gradient(150deg, #123a63 0%, #0b1f3a 100%)',
+  'linear-gradient(150deg, #3a2a63 0%, #1b1b3a 100%)',
+  'linear-gradient(150deg, #14506a 0%, #0d2b2b 100%)',
+  'linear-gradient(150deg, #5a2a3a 0%, #2a1a1a 100%)',
 ];
+const clamp = {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'} as const;
+const easeOut = Easing.out(Easing.cubic);
 
 const useFonts = () => {
   const [handle] = useState(() => delayRender('Loading Myanmar fonts'));
@@ -67,78 +73,141 @@ const SceneView: React.FC<{scene: Scene; index: number; frames: number}> = ({
   frames,
 }) => {
   const frame = useCurrentFrame();
-  const zoom = interpolate(frame, [0, frames], [1, 1.08], {
-    extrapolateLeft: 'clamp',
-    extrapolateRight: 'clamp',
-  });
-  const fadeOut = interpolate(frame, [frames - 6, frames], [1, 0.0], {
-    extrapolateLeft: 'clamp',
-    extrapolateRight: 'clamp',
-  });
+  const enter = interpolate(frame, [0, 14], [0, 1], {...clamp, easing: easeOut});
+  const exit = interpolate(frame, [frames - 8, frames], [1, 0], clamp);
+  const opacity = Math.min(enter, exit);
+  const slide = (1 - enter) * 80;
+  const zoom = interpolate(frame, [0, frames], [1, 1.07], clamp);
   const lines = scene.caption_lines_my ?? [];
+  const label = String(scene.idx ?? index + 1).padStart(2, '0');
+  const hl = scene.highlight_my ?? '';
+  const hlSize = hl.length > 14 ? 76 : hl.length > 8 ? 96 : 120;
+  const hasClip = Boolean(scene.clip_url);
 
   return (
-    <AbsoluteFill style={{opacity: fadeOut}}>
-      <AbsoluteFill style={{transform: `scale(${zoom})`}}>
-        {scene.clip_url ? (
-          <OffthreadVideo
-            src={scene.clip_url}
-            muted
-            style={{width: '100%', height: '100%', objectFit: 'cover'}}
-          />
-        ) : (
-          <AbsoluteFill style={{background: GRADIENTS[index % GRADIENTS.length]}} />
-        )}
-      </AbsoluteFill>
-      <AbsoluteFill
-        style={{
-          background:
-            'linear-gradient(180deg, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.05) 35%, rgba(0,0,0,0.05) 55%, rgba(0,0,0,0.6) 100%)',
-        }}
-      />
+    <AbsoluteFill>
       <div
         style={{
           position: 'absolute',
           left: 60,
-          right: 60,
-          top: 1080,
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 18,
-          alignItems: 'center',
+          top: 540,
+          width: 960,
+          height: 700,
+          borderRadius: 36,
+          overflow: 'hidden',
+          border: '2px solid rgba(255,255,255,0.14)',
+          boxShadow: '0 24px 60px rgba(0,0,0,0.45)',
+          opacity,
+          transform: `translateX(${slide}px)`,
         }}
       >
-        {lines.map((line, i) => {
-          const start = 6 + i * 8;
-          const opacity = interpolate(frame, [start, start + 10], [0, 1], {
-            extrapolateLeft: 'clamp',
-            extrapolateRight: 'clamp',
-          });
-          const y = interpolate(frame, [start, start + 10], [24, 0], {
-            extrapolateLeft: 'clamp',
-            extrapolateRight: 'clamp',
-          });
-          return (
+        <div style={{position: 'absolute', inset: 0, transform: `scale(${zoom})`}}>
+          {hasClip ? (
+            <OffthreadVideo
+              src={scene.clip_url as string}
+              muted
+              style={{width: '100%', height: '100%', objectFit: 'cover'}}
+            />
+          ) : (
             <div
-              key={i}
               style={{
-                opacity,
-                transform: `translateY(${y}px)`,
-                background: 'rgba(0,0,0,0.62)',
-                color: '#ffffff',
-                fontFamily: BODY,
-                fontWeight: 500,
-                fontSize: 58,
-                lineHeight: 1.9,
-                padding: '6px 36px',
-                borderRadius: 24,
-                textAlign: 'center',
+                width: '100%',
+                height: '100%',
+                background: PANEL_GRADIENTS[index % PANEL_GRADIENTS.length],
               }}
-            >
-              {line}
-            </div>
-          );
-        })}
+            />
+          )}
+        </div>
+        {hasClip ? (
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              background:
+                'linear-gradient(180deg, rgba(0,0,0,0) 45%, rgba(0,0,0,0.7) 100%)',
+            }}
+          />
+        ) : null}
+        <div
+          style={{
+            position: 'absolute',
+            top: 28,
+            left: 32,
+            background: RED,
+            color: '#fff',
+            fontFamily: 'sans-serif',
+            fontWeight: 800,
+            fontSize: 30,
+            letterSpacing: 3,
+            padding: '6px 20px',
+            borderRadius: 10,
+          }}
+        >
+          {'NO. ' + label}
+        </div>
+        {hl ? (
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              display: 'flex',
+              alignItems: hasClip ? 'flex-end' : 'center',
+              justifyContent: 'center',
+              padding: hasClip ? '0 50px 44px 50px' : '0 60px',
+              textAlign: 'center',
+              color: '#ffffff',
+              fontFamily: BOLD,
+              fontWeight: 700,
+              fontSize: hasClip ? 76 : hlSize,
+              lineHeight: 1.7,
+            }}
+          >
+            {hl}
+          </div>
+        ) : null}
+      </div>
+
+      <div
+        style={{
+          position: 'absolute',
+          left: 60,
+          top: 1290,
+          width: 960,
+          opacity,
+          transform: `translateY(${(1 - enter) * 40}px)`,
+        }}
+      >
+        <div
+          style={{
+            background: 'rgba(0,0,0,0.68)',
+            borderRadius: 30,
+            padding: '18px 36px',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+          }}
+        >
+          {lines.map((line, i) => {
+            const start = 10 + i * 8;
+            const o = interpolate(frame, [start, start + 10], [0, 1], clamp);
+            return (
+              <div
+                key={i}
+                style={{
+                  opacity: o,
+                  color: '#ffffff',
+                  fontFamily: BODY,
+                  fontWeight: 500,
+                  fontSize: 56,
+                  lineHeight: 1.85,
+                  textAlign: 'center',
+                }}
+              >
+                {line}
+              </div>
+            );
+          })}
+        </div>
       </div>
     </AbsoluteFill>
   );
@@ -147,6 +216,7 @@ const SceneView: React.FC<{scene: Scene; index: number; frames: number}> = ({
 export const NewsVideo: React.FC<NewsProps> = ({
   channel,
   headline_my,
+  date_my,
   source_my,
   scenes,
 }) => {
@@ -163,19 +233,18 @@ export const NewsVideo: React.FC<NewsProps> = ({
   });
 
   const progress = Math.min(1, frame / Math.max(1, durationInFrames));
-  const headIn = interpolate(frame, [0, 14], [0, 1], {
-    extrapolateLeft: 'clamp',
-    extrapolateRight: 'clamp',
-  });
+  const headIn = interpolate(frame, [0, 16], [0, 1], {...clamp, easing: easeOut});
+  const glowX = 50 + 12 * Math.sin(frame / 70);
+  const glowY = 35 + 8 * Math.cos(frame / 90);
 
   return (
-    <AbsoluteFill style={{backgroundColor: '#05101f'}}>
-      {items.map(({scene, index, from: start, frames}) => (
-        <Sequence key={index} from={start} durationInFrames={frames}>
-          <SceneView scene={scene} index={index} frames={frames} />
-        </Sequence>
-      ))}
-
+    <AbsoluteFill
+      style={{
+        background:
+          `radial-gradient(circle at ${glowX}% ${glowY}%, #1f5fa8 0%, rgba(31,95,168,0) 55%), ` +
+          'linear-gradient(180deg, #07142a 0%, #0a1f3d 60%, #050d1c 100%)',
+      }}
+    >
       <div
         style={{
           position: 'absolute',
@@ -183,63 +252,95 @@ export const NewsVideo: React.FC<NewsProps> = ({
           left: 0,
           height: 10,
           width: `${progress * 100}%`,
-          background: '#ff4d4d',
+          background: RED,
         }}
       />
 
       <div
         style={{
           position: 'absolute',
-          top: 110,
+          top: 70,
           left: 60,
           right: 60,
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
           opacity: headIn,
         }}
       >
         <div
           style={{
-            display: 'inline-block',
-            background: '#ff4d4d',
+            background: RED,
             color: '#fff',
             fontFamily: 'sans-serif',
             fontWeight: 800,
             fontSize: 36,
             letterSpacing: 4,
-            padding: '8px 24px',
+            padding: '8px 26px',
             borderRadius: 12,
-            marginBottom: 28,
           }}
         >
           {channel}
         </div>
-        <div
-          style={{
-            borderLeft: '10px solid #ff4d4d',
-            paddingLeft: 28,
-            color: '#ffffff',
-            fontFamily: BOLD,
-            fontWeight: 700,
-            fontSize: 68,
-            lineHeight: 1.7,
-          }}
-        >
-          {headline_my}
-        </div>
+        {date_my ? (
+          <div
+            style={{
+              color: '#b8c7d9',
+              fontFamily: BODY,
+              fontWeight: 500,
+              fontSize: 34,
+              lineHeight: 1.8,
+            }}
+          >
+            {date_my}
+          </div>
+        ) : null}
       </div>
+
+      <div
+        style={{
+          position: 'absolute',
+          top: 165,
+          left: 60,
+          width: 960,
+          borderLeft: `12px solid ${RED}`,
+          paddingLeft: 30,
+          color: '#ffffff',
+          fontFamily: BOLD,
+          fontWeight: 700,
+          fontSize: 70,
+          lineHeight: 1.65,
+          display: '-webkit-box',
+          WebkitLineClamp: 3,
+          WebkitBoxOrient: 'vertical',
+          overflow: 'hidden',
+          opacity: headIn,
+          transform: `translateY(${(1 - headIn) * -30}px)`,
+        }}
+      >
+        {headline_my}
+      </div>
+
+      {items.map(({scene, index, from: start, frames}) => (
+        <Sequence key={index} from={start} durationInFrames={frames}>
+          <SceneView scene={scene} index={index} frames={frames} />
+        </Sequence>
+      ))}
 
       {source_my ? (
         <div
           style={{
             position: 'absolute',
             left: 60,
-            right: 60,
-            top: 1560,
-            color: '#b8c7d9',
+            top: 1600,
+            background: 'rgba(255,255,255,0.09)',
+            color: '#c9d6e6',
             fontFamily: BODY,
             fontWeight: 500,
-            fontSize: 36,
+            fontSize: 34,
             lineHeight: 1.8,
-            textAlign: 'center',
+            padding: '4px 28px',
+            borderRadius: 16,
           }}
         >
           {source_my}
