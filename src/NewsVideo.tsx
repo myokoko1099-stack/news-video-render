@@ -26,6 +26,7 @@ export type Scene = {
 
 export type NewsProps = {
   channel: string;
+  tagline_my?: string;
   headline_my: string;
   date_my?: string;
   source_my?: string;
@@ -34,7 +35,12 @@ export type NewsProps = {
 
 const BODY = 'NotoMy, sans-serif';
 const BOLD = 'NotoMyBold, NotoMy, sans-serif';
-const RED = '#ff4d4d';
+const LATIN = 'Helvetica, Arial, sans-serif';
+const RED = '#e5301a';
+const YELLOW = '#ffd84d';
+const GREEN = '#39ff14';
+const VIDEO_TOP = 600;
+const VIDEO_H = 608;
 const PANEL_GRADIENTS = [
   'linear-gradient(150deg, #123a63 0%, #0b1f3a 100%)',
   'linear-gradient(150deg, #3a2a63 0%, #1b1b3a 100%)',
@@ -76,34 +82,30 @@ const SceneView: React.FC<{
   isLast: boolean;
 }> = ({scene, index, frames, isLast}) => {
   const frame = useCurrentFrame();
-  const enter = interpolate(frame, [0, 14], [0, 1], {...clamp, easing: easeOut});
-  const exit = isLast ? 1 : interpolate(frame, [frames - 8, frames], [1, 0], clamp);
+  const enter = interpolate(frame, [0, 12], [0, 1], {...clamp, easing: easeOut});
+  const exit = isLast ? 1 : interpolate(frame, [frames - 6, frames], [1, 0], clamp);
   const opacity = Math.min(enter, exit);
-  const slide = (1 - enter) * 80;
   const zoom = interpolate(frame, [0, frames], [1, 1.07], clamp);
   const lines = scene.caption_lines_my ?? [];
-  const label = String(scene.idx ?? index + 1).padStart(2, '0');
+  const totalChars = Math.max(1, lines.join('').length);
   const hl = scene.highlight_my ?? '';
   const hlSize = hl.length > 14 ? 76 : hl.length > 8 ? 96 : 120;
   const hasClip = Boolean(scene.clip_url);
-  const totalChars = Math.max(1, lines.join('').length);
 
   return (
     <AbsoluteFill>
       {scene.audio_file ? <Audio src={staticFile(scene.audio_file)} /> : null}
+
       <div
         style={{
           position: 'absolute',
-          left: 60,
-          top: 540,
-          width: 960,
-          height: 700,
-          borderRadius: 36,
+          left: 0,
+          top: VIDEO_TOP,
+          width: 1080,
+          height: VIDEO_H,
           overflow: 'hidden',
-          border: '2px solid rgba(255,255,255,0.14)',
-          boxShadow: '0 24px 60px rgba(0,0,0,0.45)',
+          background: '#0b1118',
           opacity,
-          transform: `translateX(${slide}px)`,
         }}
       >
         <div style={{position: 'absolute', inset: 0, transform: `scale(${zoom})`}}>
@@ -129,64 +131,66 @@ const SceneView: React.FC<{
               position: 'absolute',
               inset: 0,
               background:
-                'linear-gradient(180deg, rgba(0,0,0,0) 45%, rgba(0,0,0,0.7) 100%)',
+                'linear-gradient(180deg, rgba(0,0,0,0) 55%, rgba(0,0,0,0.55) 100%)',
             }}
           />
         ) : null}
-        <div
-          style={{
-            position: 'absolute',
-            top: 28,
-            left: 32,
-            background: RED,
-            color: '#fff',
-            fontFamily: 'sans-serif',
-            fontWeight: 800,
-            fontSize: 30,
-            letterSpacing: 3,
-            padding: '6px 20px',
-            borderRadius: 10,
-          }}
-        >
-          {'NO. ' + label}
-        </div>
         {hl ? (
-          <div
-            style={{
-              position: 'absolute',
-              inset: 0,
-              display: 'flex',
-              alignItems: hasClip ? 'flex-end' : 'center',
-              justifyContent: 'center',
-              padding: hasClip ? '0 50px 44px 50px' : '0 60px',
-              textAlign: 'center',
-              color: '#ffffff',
-              fontFamily: BOLD,
-              fontWeight: 700,
-              fontSize: hasClip ? 76 : hlSize,
-              lineHeight: 1.7,
-            }}
-          >
-            {hl}
-          </div>
+          hasClip ? (
+            <div
+              style={{
+                position: 'absolute',
+                left: 0,
+                bottom: 24,
+                background: RED,
+                color: '#fff',
+                fontFamily: BOLD,
+                fontWeight: 700,
+                fontSize: 46,
+                lineHeight: 1.7,
+                padding: '0 30px',
+              }}
+            >
+              {hl}
+            </div>
+          ) : (
+            <div
+              style={{
+                position: 'absolute',
+                inset: 0,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '0 60px',
+                textAlign: 'center',
+                color: '#ffffff',
+                fontFamily: BOLD,
+                fontWeight: 700,
+                fontSize: hlSize,
+                lineHeight: 1.7,
+              }}
+            >
+              {hl}
+            </div>
+          )
         ) : null}
       </div>
 
       <div
         style={{
           position: 'absolute',
-          left: 60,
-          top: 1290,
-          width: 960,
+          left: 40,
+          top: 1236,
+          width: 1000,
           opacity,
-          transform: `translateY(${(1 - enter) * 40}px)`,
+          transform: `translateY(${(1 - enter) * 30}px)`,
         }}
       >
         <div
           style={{
-            background: 'rgba(0,0,0,0.68)',
-            borderRadius: 30,
-            padding: '18px 36px',
+            background: 'rgba(0,0,0,0.58)',
+            borderRadius: 28,
+            padding: '14px 32px',
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
@@ -194,8 +198,8 @@ const SceneView: React.FC<{
         >
           {lines.map((line, i) => {
             const before = lines.slice(0, i).join('').length;
-            const start = Math.round(10 + Math.max(0, frames - 30) * (before / totalChars));
-            const o = interpolate(frame, [start, start + 10], [0, 1], clamp);
+            const start = Math.round(8 + Math.max(0, frames - 30) * (before / totalChars));
+            const o = interpolate(frame, [start, start + 8], [0, 1], clamp);
             return (
               <div
                 key={i}
@@ -204,7 +208,7 @@ const SceneView: React.FC<{
                   color: '#ffffff',
                   fontFamily: BODY,
                   fontWeight: 500,
-                  fontSize: 56,
+                  fontSize: 54,
                   lineHeight: 1.85,
                   textAlign: 'center',
                 }}
@@ -221,6 +225,7 @@ const SceneView: React.FC<{
 
 export const NewsVideo: React.FC<NewsProps> = ({
   channel,
+  tagline_my,
   headline_my,
   date_my,
   source_my,
@@ -239,18 +244,23 @@ export const NewsVideo: React.FC<NewsProps> = ({
   });
 
   const progress = Math.min(1, frame / Math.max(1, durationInFrames));
-  const headIn = interpolate(frame, [0, 16], [0, 1], {...clamp, easing: easeOut});
-  const glowX = 50 + 12 * Math.sin(frame / 70);
-  const glowY = 35 + 8 * Math.cos(frame / 90);
+  const headIn = interpolate(frame, [0, 14], [0, 1], {...clamp, easing: easeOut});
+  const glowX = 50 + 14 * Math.sin(frame / 70);
 
   return (
     <AbsoluteFill
       style={{
         background:
-          `radial-gradient(circle at ${glowX}% ${glowY}%, #1f5fa8 0%, rgba(31,95,168,0) 55%), ` +
-          'linear-gradient(180deg, #07142a 0%, #0a1f3d 60%, #050d1c 100%)',
+          `radial-gradient(circle at ${glowX}% 18%, #ff7a3d 0%, rgba(255,122,61,0) 55%), ` +
+          'linear-gradient(180deg, #b81d08 0%, #d83a0c 55%, #9d1606 100%)',
       }}
     >
+      <AbsoluteFill
+        style={{
+          background:
+            'repeating-linear-gradient(115deg, rgba(255,255,255,0.05) 0px, rgba(255,255,255,0.05) 40px, rgba(255,255,255,0) 40px, rgba(255,255,255,0) 130px)',
+        }}
+      />
       <div
         style={{
           position: 'absolute',
@@ -258,73 +268,64 @@ export const NewsVideo: React.FC<NewsProps> = ({
           left: 0,
           height: 10,
           width: `${progress * 100}%`,
-          background: RED,
+          background: '#ffffff',
         }}
       />
 
       <div
         style={{
           position: 'absolute',
-          top: 70,
-          left: 60,
-          right: 60,
+          top: 95,
+          left: 40,
+          right: 40,
           display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
+          flexDirection: 'column',
+          gap: 24,
           opacity: headIn,
+          transform: `translateY(${(1 - headIn) * -30}px)`,
         }}
       >
         <div
           style={{
-            background: RED,
-            color: '#fff',
-            fontFamily: 'sans-serif',
-            fontWeight: 800,
-            fontSize: 36,
-            letterSpacing: 4,
-            padding: '8px 26px',
-            borderRadius: 12,
+            background: YELLOW,
+            borderRadius: 28,
+            padding: '16px 34px',
+            boxShadow: '0 8px 0 rgba(0,0,0,0.25)',
           }}
         >
-          {channel}
+          <div
+            style={{
+              color: '#1a1a1a',
+              fontFamily: BOLD,
+              fontWeight: 700,
+              fontSize: 56,
+              lineHeight: 1.8,
+              textAlign: 'center',
+              display: '-webkit-box',
+              WebkitLineClamp: 3,
+              WebkitBoxOrient: 'vertical',
+              overflow: 'hidden',
+            }}
+          >
+            {headline_my}
+          </div>
         </div>
         {date_my ? (
           <div
             style={{
-              color: '#b8c7d9',
-              fontFamily: BODY,
-              fontWeight: 500,
-              fontSize: 34,
-              lineHeight: 1.8,
+              fontFamily: LATIN,
+              fontWeight: 900,
+              fontSize: 80,
+              lineHeight: 1.1,
+              color: GREEN,
+              WebkitTextStroke: '9px #062506',
+              paintOrder: 'stroke fill',
+              letterSpacing: 1,
             }}
           >
             {date_my}
           </div>
         ) : null}
-      </div>
-
-      <div
-        style={{
-          position: 'absolute',
-          top: 165,
-          left: 60,
-          width: 960,
-          borderLeft: `12px solid ${RED}`,
-          paddingLeft: 30,
-          color: '#ffffff',
-          fontFamily: BOLD,
-          fontWeight: 700,
-          fontSize: 70,
-          lineHeight: 1.65,
-          display: '-webkit-box',
-          WebkitLineClamp: 3,
-          WebkitBoxOrient: 'vertical',
-          overflow: 'hidden',
-          opacity: headIn,
-          transform: `translateY(${(1 - headIn) * -30}px)`,
-        }}
-      >
-        {headline_my}
       </div>
 
       {items.map(({scene, index, from: start, frames}) => (
@@ -338,25 +339,86 @@ export const NewsVideo: React.FC<NewsProps> = ({
         </Sequence>
       ))}
 
+      <div
+        style={{
+          position: 'absolute',
+          top: VIDEO_TOP + 18,
+          right: 18,
+          background: '#ffffff',
+          color: '#c4210b',
+          fontFamily: LATIN,
+          fontWeight: 900,
+          fontSize: 28,
+          padding: '8px 18px',
+          borderRadius: 10,
+          letterSpacing: 1,
+        }}
+      >
+        {channel}
+      </div>
+
       {source_my ? (
         <div
           style={{
             position: 'absolute',
-            left: 60,
-            top: 1600,
-            background: 'rgba(255,255,255,0.09)',
-            color: '#c9d6e6',
+            left: 40,
+            top: 1496,
+            background: 'rgba(0,0,0,0.35)',
+            color: '#ffe9d6',
             fontFamily: BODY,
             fontWeight: 500,
-            fontSize: 34,
+            fontSize: 32,
             lineHeight: 1.8,
-            padding: '4px 28px',
+            padding: '2px 26px',
             borderRadius: 16,
           }}
         >
           {source_my}
         </div>
       ) : null}
+
+      <div
+        style={{
+          position: 'absolute',
+          left: 40,
+          right: 40,
+          top: 1572,
+          textAlign: 'center',
+        }}
+      >
+        <div
+          style={{
+            fontFamily: LATIN,
+            fontWeight: 900,
+            fontStyle: 'italic',
+            fontSize: 112,
+            lineHeight: 1.05,
+            color: '#ffffff',
+            textShadow: '0 7px 0 #6e1103',
+            letterSpacing: -2,
+          }}
+        >
+          {channel}
+        </div>
+        {tagline_my ? (
+          <div
+            style={{
+              display: 'inline-block',
+              marginTop: 14,
+              background: 'rgba(0,0,0,0.4)',
+              color: '#ffe3b8',
+              fontFamily: BODY,
+              fontWeight: 500,
+              fontSize: 40,
+              lineHeight: 1.8,
+              padding: '0 34px',
+              borderRadius: 18,
+            }}
+          >
+            {tagline_my}
+          </div>
+        ) : null}
+      </div>
     </AbsoluteFill>
   );
 };
