@@ -7,6 +7,10 @@ on:
         description: 'Video props as JSON (leave empty to use src/sample.json)'
         required: false
         default: ''
+      voice:
+        description: 'Gemini TTS voice name'
+        required: false
+        default: 'Kore'
 
 jobs:
   render:
@@ -37,6 +41,12 @@ jobs:
           else
             cp src/sample.json props.json
           fi
+
+      - name: Generate voice (Gemini TTS)
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          TTS_VOICE: ${{ inputs.voice }}
+        run: node scripts/tts.mjs props.json
 
       - name: Render video
         run: npx remotion render src/index.ts News out/video.mp4 --props=props.json

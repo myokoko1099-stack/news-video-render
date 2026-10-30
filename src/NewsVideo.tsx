@@ -1,6 +1,7 @@
 import React, {useEffect, useState} from 'react';
 import {
   AbsoluteFill,
+  Audio,
   Easing,
   OffthreadVideo,
   Sequence,
@@ -20,6 +21,7 @@ export type Scene = {
   visual_query_en?: string;
   duration_sec: number;
   clip_url?: string | null;
+  audio_file?: string;
 };
 
 export type NewsProps = {
@@ -67,14 +69,15 @@ const useFonts = () => {
   }, [handle]);
 };
 
-const SceneView: React.FC<{scene: Scene; index: number; frames: number}> = ({
-  scene,
-  index,
-  frames,
-}) => {
+const SceneView: React.FC<{
+  scene: Scene;
+  index: number;
+  frames: number;
+  isLast: boolean;
+}> = ({scene, index, frames, isLast}) => {
   const frame = useCurrentFrame();
   const enter = interpolate(frame, [0, 14], [0, 1], {...clamp, easing: easeOut});
-  const exit = interpolate(frame, [frames - 8, frames], [1, 0], clamp);
+  const exit = isLast ? 1 : interpolate(frame, [frames - 8, frames], [1, 0], clamp);
   const opacity = Math.min(enter, exit);
   const slide = (1 - enter) * 80;
   const zoom = interpolate(frame, [0, frames], [1, 1.07], clamp);
@@ -83,9 +86,11 @@ const SceneView: React.FC<{scene: Scene; index: number; frames: number}> = ({
   const hl = scene.highlight_my ?? '';
   const hlSize = hl.length > 14 ? 76 : hl.length > 8 ? 96 : 120;
   const hasClip = Boolean(scene.clip_url);
+  const totalChars = Math.max(1, lines.join('').length);
 
   return (
     <AbsoluteFill>
+      {scene.audio_file ? <Audio src={staticFile(scene.audio_file)} /> : null}
       <div
         style={{
           position: 'absolute',
@@ -188,7 +193,8 @@ const SceneView: React.FC<{scene: Scene; index: number; frames: number}> = ({
           }}
         >
           {lines.map((line, i) => {
-            const start = 10 + i * 8;
+            const before = lines.slice(0, i).join('').length;
+            const start = Math.round(10 + Math.max(0, frames - 30) * (before / totalChars));
             const o = interpolate(frame, [start, start + 10], [0, 1], clamp);
             return (
               <div
@@ -323,7 +329,12 @@ export const NewsVideo: React.FC<NewsProps> = ({
 
       {items.map(({scene, index, from: start, frames}) => (
         <Sequence key={index} from={start} durationInFrames={frames}>
-          <SceneView scene={scene} index={index} frames={frames} />
+          <SceneView
+            scene={scene}
+            index={index}
+            frames={frames}
+            isLast={index === items.length - 1}
+          />
         </Sequence>
       ))}
 
