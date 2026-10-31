@@ -3,6 +3,7 @@ import {
   AbsoluteFill,
   Audio,
   Easing,
+  Img,
   OffthreadVideo,
   Sequence,
   continueRender,
@@ -21,6 +22,8 @@ export type Scene = {
   visual_query_en?: string;
   duration_sec: number;
   clip_url?: string | null;
+  image_url?: string | null;
+  image_credit?: string;
   audio_file?: string;
 };
 
@@ -90,7 +93,7 @@ const SceneView: React.FC<{
   const totalChars = Math.max(1, lines.join('').length);
   const hl = scene.highlight_my ?? '';
   const hlSize = hl.length > 14 ? 76 : hl.length > 8 ? 96 : 120;
-  const hasClip = Boolean(scene.clip_url);
+  const hasClip = Boolean(scene.clip_url) || Boolean(scene.image_url);
 
   return (
     <AbsoluteFill>
@@ -109,10 +112,15 @@ const SceneView: React.FC<{
         }}
       >
         <div style={{position: 'absolute', inset: 0, transform: `scale(${zoom})`}}>
-          {hasClip ? (
+          {scene.clip_url ? (
             <OffthreadVideo
               src={scene.clip_url as string}
               muted
+              style={{width: '100%', height: '100%', objectFit: 'cover'}}
+            />
+          ) : scene.image_url ? (
+            <Img
+              src={scene.image_url}
               style={{width: '100%', height: '100%', objectFit: 'cover'}}
             />
           ) : (
@@ -173,6 +181,24 @@ const SceneView: React.FC<{
               {hl}
             </div>
           )
+        ) : null}
+        {scene.image_url && scene.image_credit ? (
+          <div
+            style={{
+              position: 'absolute',
+              right: 0,
+              bottom: 0,
+              maxWidth: 640,
+              background: 'rgba(0,0,0,0.6)',
+              color: '#ffffff',
+              fontFamily: LATIN,
+              fontSize: 20,
+              lineHeight: 1.3,
+              padding: '4px 12px',
+            }}
+          >
+            {scene.image_credit}
+          </div>
         ) : null}
       </div>
 
