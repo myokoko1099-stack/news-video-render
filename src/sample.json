@@ -1,6 +1,9 @@
 {
   "channel": "AI NEWS",
   "tagline_my": "ကမ္ဘာ့သတင်းများ",
+  "template": "geo",
+  "flags": ["mm", "us"],
+  "headline_en": "News template test",
   "headline_my": "မြန်မာသတင်း ဗီဒီယိုစနစ် ဒီဇိုင်းအသစ် စမ်းသပ်ခြင်း",
   "date_my": "30/October/2026",
   "source_my": "ရင်းမြစ်: နမူနာ",

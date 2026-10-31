@@ -31,6 +31,9 @@ export type NewsProps = {
   channel: string;
   tagline_my?: string;
   headline_my: string;
+  headline_en?: string;
+  template?: 'geo' | 'news';
+  flags?: string[];
   date_my?: string;
   source_my?: string;
   scenes: Scene[];
@@ -43,6 +46,7 @@ const RED = '#e5301a';
 const YELLOW = '#ffd84d';
 const GREEN = '#39ff14';
 const VIDEO_TOP = 600;
+const MAP_URL = 'https://commons.wikimedia.org/wiki/Special:FilePath/BlankMap-World.svg';
 const VIDEO_H = 608;
 const PANEL_GRADIENTS = [
   'linear-gradient(150deg, #123a63 0%, #0b1f3a 100%)',
@@ -83,7 +87,8 @@ const SceneView: React.FC<{
   index: number;
   frames: number;
   isLast: boolean;
-}> = ({scene, index, frames, isLast}) => {
+  flags: string[];
+}> = ({scene, index, frames, isLast, flags}) => {
   const frame = useCurrentFrame();
   const enter = interpolate(frame, [0, 12], [0, 1], {...clamp, easing: easeOut});
   const exit = isLast ? 1 : interpolate(frame, [frames - 6, frames], [1, 0], clamp);
@@ -182,7 +187,20 @@ const SceneView: React.FC<{
             </div>
           )
         ) : null}
-        {scene.image_url && scene.image_credit ? (
+        {flags.length > 0 ? (
+          <div
+            style={{position: 'absolute', left: 18, top: 18, display: 'flex', gap: 10}}
+          >
+            {flags.map((c) => (
+              <Img
+                key={c}
+                src={`https://flagcdn.com/w160/${c}.png`}
+                style={{height: 52, borderRadius: 6, border: '2px solid #ffffff'}}
+              />
+            ))}
+          </div>
+        ) : null}
+        {(scene.image_url || scene.clip_url) && scene.image_credit ? (
           <div
             style={{
               position: 'absolute',
@@ -253,11 +271,19 @@ export const NewsVideo: React.FC<NewsProps> = ({
   channel,
   tagline_my,
   headline_my,
+  headline_en,
+  template,
+  flags,
   date_my,
   source_my,
   scenes,
 }) => {
   useFonts();
+  const isGeo = (template ?? 'news') === 'geo';
+  const flagList = (flags ?? [])
+    .slice(0, 3)
+    .map((c) => c.toLowerCase())
+    .filter((c) => /^[a-z]{2}$/.test(c));
   const frame = useCurrentFrame();
   const {fps, durationInFrames} = useVideoConfig();
 
@@ -276,11 +302,26 @@ export const NewsVideo: React.FC<NewsProps> = ({
   return (
     <AbsoluteFill
       style={{
-        background:
-          `radial-gradient(circle at ${glowX}% 18%, #ff7a3d 0%, rgba(255,122,61,0) 55%), ` +
-          'linear-gradient(180deg, #b81d08 0%, #d83a0c 55%, #9d1606 100%)',
+        background: isGeo
+          ? `radial-gradient(circle at ${glowX}% 24%, #2b7de0 0%, rgba(43,125,224,0) 55%), ` +
+            'linear-gradient(180deg, #06214a 0%, #0a3a7a 55%, #04142e 100%)'
+          : `radial-gradient(circle at ${glowX}% 18%, #ff7a3d 0%, rgba(255,122,61,0) 55%), ` +
+            'linear-gradient(180deg, #b81d08 0%, #d83a0c 55%, #9d1606 100%)',
       }}
     >
+      {isGeo ? (
+        <Img
+          src={MAP_URL}
+          style={{
+            position: 'absolute',
+            left: -40,
+            top: 150,
+            width: 1160,
+            opacity: 0.22,
+            mixBlendMode: 'screen',
+          }}
+        />
+      ) : null}
       <AbsoluteFill
         style={{
           background:
@@ -298,6 +339,92 @@ export const NewsVideo: React.FC<NewsProps> = ({
         }}
       />
 
+      {isGeo ? (
+        <div
+          style={{
+            position: 'absolute',
+            top: 80,
+            left: 40,
+            right: 40,
+            opacity: headIn,
+            transform: `translateY(${(1 - headIn) * -30}px)`,
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: 22,
+            }}
+          >
+            {date_my ? (
+              <div
+                style={{
+                  fontFamily: LATIN,
+                  fontWeight: 900,
+                  fontSize: 54,
+                  lineHeight: 1.1,
+                  color: GREEN,
+                  WebkitTextStroke: '7px #062506',
+                  paintOrder: 'stroke fill',
+                }}
+              >
+                {date_my}
+              </div>
+            ) : (
+              <div />
+            )}
+            <div
+              style={{
+                fontFamily: LATIN,
+                fontWeight: 800,
+                fontSize: 28,
+                letterSpacing: 4,
+                color: '#cfe3ff',
+              }}
+            >
+              GLOBAL
+            </div>
+          </div>
+          <div style={{borderLeft: '10px solid #3aa0ff', paddingLeft: 26}}>
+            {headline_en ? (
+              <div
+                style={{
+                  fontFamily: LATIN,
+                  fontWeight: 900,
+                  fontSize: 52,
+                  lineHeight: 1.2,
+                  color: '#ffffff',
+                  textTransform: 'uppercase',
+                  display: '-webkit-box',
+                  WebkitLineClamp: 3,
+                  WebkitBoxOrient: 'vertical',
+                  overflow: 'hidden',
+                }}
+              >
+                {headline_en}
+              </div>
+            ) : null}
+            <div
+              style={{
+                marginTop: 14,
+                fontFamily: BOLD,
+                fontWeight: 700,
+                fontSize: 44,
+                lineHeight: 1.75,
+                color: YELLOW,
+                display: '-webkit-box',
+                WebkitLineClamp: 2,
+                WebkitBoxOrient: 'vertical',
+                overflow: 'hidden',
+              }}
+            >
+              {headline_my}
+            </div>
+          </div>
+        </div>
+      ) : (
       <div
         style={{
           position: 'absolute',
@@ -353,6 +480,7 @@ export const NewsVideo: React.FC<NewsProps> = ({
           </div>
         ) : null}
       </div>
+      )}
 
       {items.map(({scene, index, from: start, frames}) => (
         <Sequence key={index} from={start} durationInFrames={frames}>
@@ -361,6 +489,7 @@ export const NewsVideo: React.FC<NewsProps> = ({
             index={index}
             frames={frames}
             isLast={index === items.length - 1}
+            flags={flagList}
           />
         </Sequence>
       ))}
