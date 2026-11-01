@@ -19,6 +19,7 @@ export type Scene = {
   narration_my?: string;
   caption_lines_my?: string[];
   highlight_my?: string;
+  highlight_en?: string;
   visual_query_en?: string;
   duration_sec: number;
   clip_url?: string | null;
@@ -34,6 +35,7 @@ export type NewsProps = {
   headline_en?: string;
   template?: 'geo' | 'news';
   flags?: string[];
+  show_my?: boolean;
   date_my?: string;
   source_my?: string;
   scenes: Scene[];
@@ -88,7 +90,8 @@ const SceneView: React.FC<{
   frames: number;
   isLast: boolean;
   flags: string[];
-}> = ({scene, index, frames, isLast, flags}) => {
+  showMy: boolean;
+}> = ({scene, index, frames, isLast, flags, showMy}) => {
   const frame = useCurrentFrame();
   const enter = interpolate(frame, [0, 12], [0, 1], {...clamp, easing: easeOut});
   const exit = isLast ? 1 : interpolate(frame, [frames - 6, frames], [1, 0], clamp);
@@ -96,7 +99,7 @@ const SceneView: React.FC<{
   const zoom = interpolate(frame, [0, frames], [1, 1.07], clamp);
   const lines = scene.caption_lines_my ?? [];
   const totalChars = Math.max(1, lines.join('').length);
-  const hl = scene.highlight_my ?? '';
+  const hl = (showMy ? scene.highlight_my : scene.highlight_en) ?? '';
   const hlSize = hl.length > 14 ? 76 : hl.length > 8 ? 96 : 120;
   const hasClip = Boolean(scene.clip_url) || Boolean(scene.image_url);
 
@@ -110,7 +113,7 @@ const SceneView: React.FC<{
           left: 0,
           top: VIDEO_TOP,
           width: 1080,
-          height: VIDEO_H,
+          height: showMy ? VIDEO_H : 780,
           overflow: 'hidden',
           background: '#0b1118',
           opacity,
@@ -220,6 +223,7 @@ const SceneView: React.FC<{
         ) : null}
       </div>
 
+      {showMy ? (
       <div
         style={{
           position: 'absolute',
@@ -263,6 +267,7 @@ const SceneView: React.FC<{
           })}
         </div>
       </div>
+      ) : null}
     </AbsoluteFill>
   );
 };
@@ -274,12 +279,14 @@ export const NewsVideo: React.FC<NewsProps> = ({
   headline_en,
   template,
   flags,
+  show_my,
   date_my,
   source_my,
   scenes,
 }) => {
   useFonts();
   const isGeo = (template ?? 'news') === 'geo';
+  const showMy = show_my ?? true;
   const flagList = (flags ?? [])
     .slice(0, 3)
     .map((c) => c.toLowerCase())
@@ -406,6 +413,7 @@ export const NewsVideo: React.FC<NewsProps> = ({
                 {headline_en}
               </div>
             ) : null}
+            {showMy ? (
             <div
               style={{
                 marginTop: 14,
@@ -422,6 +430,7 @@ export const NewsVideo: React.FC<NewsProps> = ({
             >
               {headline_my}
             </div>
+            ) : null}
           </div>
         </div>
       ) : (
@@ -460,7 +469,7 @@ export const NewsVideo: React.FC<NewsProps> = ({
               overflow: 'hidden',
             }}
           >
-            {headline_my}
+            {showMy ? headline_my : headline_en || headline_my}
           </div>
         </div>
         {date_my ? (
@@ -490,6 +499,7 @@ export const NewsVideo: React.FC<NewsProps> = ({
             frames={frames}
             isLast={index === items.length - 1}
             flags={flagList}
+            showMy={showMy}
           />
         </Sequence>
       ))}
